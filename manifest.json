@@ -2,16 +2,22 @@
   "name": "Subte Nachi",
   "short_name": "Subte Nachi",
   "description": "Explora los subtes con Nachi",
-  "start_url": "./index.html",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#fcf9f8",
   "theme_color": "#00628a",
   "icons": [
     {
       "src": "styles/logo.png",
-      "sizes": "192x192 512x512",
+      "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "styles/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
