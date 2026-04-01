@@ -1,0 +1,9 @@
+index.php
+
+# Entornos y SO
+.env
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+node_modules/
