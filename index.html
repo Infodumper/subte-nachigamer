@@ -40,7 +40,14 @@
             },
         }
     </script>
-    <link rel="stylesheet" href="styles/main.css" />
+    <!-- PWA & Open Graph -->
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#00628a" />
+    <link rel="apple-touch-icon" href="styles/logo.png" />
+    <meta property="og:title" content="Subte Nachi" />
+    <meta property="og:description" content="¡Vamos a pasear en la red de Subtes!" />
+    <meta property="og:image" content="styles/logo.png" />
+    <meta property="og:type" content="website" />
 </head>
 <body class="bg-background text-zinc-900 selection:bg-primary/10 selection:text-primary">
 
@@ -97,5 +104,16 @@
     <script src="js/database.js?v=2"></script>
     <script src="js/views.js?v=2"></script>
     <script src="js/app.js?v=2"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').then((reg) => {
+                    console.log('ServiceWorker registrado correctamente.');
+                }).catch((err) => {
+                    console.log('Error al registrar ServiceWorker:', err);
+                });
+            });
+        }
+    </script>
 </body>
 </html>
