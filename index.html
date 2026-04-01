@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html class="light" lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Subte Nachi - ¡Vamos a pasear!</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#00628a",
+                        "on-primary": "#ffffff",
+                        "secondary": "#bb001d",
+                        "tertiary": "#705d00",
+                        "background": "#fcf9f8",
+                        "surface": "#ffffff",
+                        "line-a": "#00628a",
+                        "line-b": "#bb001d",
+                        "line-c": "#0000ff",
+                        "line-d": "#00a181",
+                        "line-e": "#9b3a97",
+                        "line-h": "#705d00"
+                    },
+                    fontFamily: {
+                        "headline": ["Public Sans"],
+                        "body": ["Inter"],
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    <link rel="stylesheet" href="styles/main.css" />
+</head>
+<body class="bg-background text-zinc-900 selection:bg-primary/10 selection:text-primary">
+
+    <!-- Top App Bar -->
+    <header class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-zinc-100">
+        <div class="flex justify-between items-center px-6 h-16 max-w-2xl mx-auto">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="router.navigate('map')">
+                <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">directions_subway</span>
+                </div>
+                <h1 class="font-headline font-black text-primary tracking-tighter text-xl">Subte Nachi</h1>
+            </div>
+            <button class="material-symbols-outlined text-zinc-400 hover:text-primary transition-colors p-2 rounded-full hover:bg-zinc-50">search</button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main id="app-content" class="pt-20 pb-32 px-4 max-w-2xl mx-auto min-h-screen">
+        <!-- Content will be injected here by app.js -->
+        <div class="flex items-center justify-center h-64">
+            <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        </div>
+    </main>
+
+    <!-- Modal Overlay (for Map Zoom) -->
+    <div id="modal-overlay" class="fixed inset-0 z-[100] bg-black/90 hidden backdrop-blur-sm animate-in fade-in duration-300 items-center justify-center p-4" onclick="router.closeModal()">
+        <button class="absolute top-6 right-6 text-white text-4xl p-2">&times;</button>
+        <img id="modal-img" src="" class="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl" onclick="event.stopPropagation()">
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-xl border-t border-zinc-100 pb-8 pt-3 z-50">
+        <div class="flex justify-around items-center max-w-2xl mx-auto px-4">
+            <button onclick="router.navigate('map')" class="nav-item flex flex-col items-center gap-1 px-5 py-3 text-zinc-400 hover:text-primary hover:bg-primary/5 rounded-2xl transition-all active:scale-95 ease-out" data-view="map">
+                <span class="material-symbols-outlined text-2xl">map</span>
+                <span class="text-[10px] font-black uppercase tracking-widest">Mapa</span>
+            </button>
+            <button onclick="router.navigate('lines')" class="nav-item flex flex-col items-center gap-1 px-5 py-3 text-zinc-400 hover:text-primary hover:bg-primary/5 rounded-2xl transition-all active:scale-95 ease-out" data-view="lines">
+                <span class="material-symbols-outlined text-2xl">subway</span>
+                <span class="text-[10px] font-black uppercase tracking-widest">Líneas</span>
+            </button>
+            <button onclick="router.navigate('trains')" class="nav-item flex flex-col items-center gap-1 px-5 py-3 text-zinc-400 hover:text-primary hover:bg-primary/5 rounded-2xl transition-all active:scale-95 ease-out" data-view="trains">
+                <span class="material-symbols-outlined text-2xl">train</span>
+                <span class="text-[10px] font-black uppercase tracking-widest">Trenes</span>
+            </button>
+            <button onclick="router.navigate('nachi')" class="nav-item flex flex-col items-center gap-1 px-5 py-3 text-zinc-400 hover:text-primary hover:bg-primary/5 rounded-2xl transition-all active:scale-95 ease-out" data-view="nachi">
+                <span class="material-symbols-outlined text-2xl filled">emoji_emotions</span>
+                <span class="text-[10px] font-black uppercase tracking-widest italic">Nachi</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Scripts -->
+    <script src="js/database.js?v=2"></script>
+    <script src="js/views.js?v=2"></script>
+    <script src="js/app.js?v=2"></script>
+</body>
+</html>
