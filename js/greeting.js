@@ -4,6 +4,12 @@ const greeting = {
         general: 'hideSubteNachiGreeting',
         lineE: 'hideSubteNachiLineEGreeting'
     },
+    
+    // Rastreo de qué saludos se han mostrado en la sesión actual
+    sessionShown: {
+        general: false,
+        lineE: false
+    },
 
     init() {
         if (!localStorage.getItem(this.keys.general)) {
@@ -12,6 +18,11 @@ const greeting = {
     },
 
     show(type) {
+        if (this.sessionShown[type]) {
+            console.log("El saludo", type, "ya se mostró en esta sesión.");
+            return;
+        }
+        
         console.log("Intentando mostrar saludo tipo:", type);
         const overlay = document.getElementById('greeting-overlay');
         const video = document.getElementById('greeting-video');
@@ -51,6 +62,9 @@ const greeting = {
         overlay.classList.add('flex');
         overlay.style.opacity = '1';
         document.getElementById('play-hint').classList.remove('hidden');
+        
+        // Marcar como mostrado en esta sesión
+        this.sessionShown[type] = true;
         
         this.toggleSound(document.getElementById('sound-checkbox').checked);
     },
