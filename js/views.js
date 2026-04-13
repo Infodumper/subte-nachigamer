@@ -62,6 +62,13 @@ const viewRegistry = {
                 window.expandedLinesState = {}; // Achicar todas
                 if (!wasExpanded) {
                     window.expandedLinesState[lineId] = true; // Agrandar solo la solicitada
+                    
+                    // Si es la Línea E, mostrar el saludo especial
+                    if (lineId === 'E') {
+                        if (typeof greeting !== 'undefined') {
+                            setTimeout(() => greeting.show('lineE'), 100);
+                        }
+                    }
                 }
                 document.getElementById('app-content').innerHTML = viewRegistry.lines();
             };

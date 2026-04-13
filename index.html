@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <html class="light" lang="es">
+
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Subte Nachi - ¡Vamos a pasear!</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700;800;900&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -50,6 +54,7 @@
     <meta property="og:image" content="https://subte-nachigamer.vercel.app/styles/logo.png" />
     <meta property="og:type" content="website" />
 </head>
+
 <body class="bg-background text-zinc-900 selection:bg-primary/10 selection:text-primary">
 
     <!-- Top App Bar -->
@@ -61,7 +66,8 @@
                 </div>
                 <h1 class="font-headline font-black text-primary tracking-tighter text-xl">Subte Nachi</h1>
             </div>
-            <button class="material-symbols-outlined text-zinc-400 hover:text-primary transition-colors p-2 rounded-full hover:bg-zinc-50">search</button>
+            <button
+                class="material-symbols-outlined text-zinc-400 hover:text-primary transition-colors p-2 rounded-full hover:bg-zinc-50">search</button>
         </div>
     </header>
 
@@ -74,27 +80,101 @@
     </main>
 
     <!-- Modal Overlay (for Map Zoom) -->
-    <div id="modal-overlay" class="fixed inset-0 z-[100] bg-black/90 hidden backdrop-blur-sm animate-in fade-in duration-300 items-center justify-center p-4" onclick="router.closeModal()">
+    <div id="modal-overlay"
+        class="fixed inset-0 z-[100] bg-black/90 hidden backdrop-blur-sm animate-in fade-in duration-300 items-center justify-center p-4"
+        onclick="router.closeModal()">
         <button class="absolute top-6 right-6 text-white text-4xl p-2">&times;</button>
-        <img id="modal-img" src="" class="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl" onclick="event.stopPropagation()">
+        <img id="modal-img" src="" class="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl"
+            onclick="event.stopPropagation()">
     </div>
+
+    <!-- Video Greeting Overlay -->
+    <div id="greeting-overlay"
+        class="fixed inset-0 z-[200] bg-black/60 backdrop-blur-md hidden items-center justify-center p-4 transition-opacity duration-500">
+        <div
+            class="bg-white dark:bg-zinc-900 rounded-[2.5rem] overflow-hidden shadow-2xl max-w-xl w-full border border-white/20 animate-in zoom-in-95 duration-500">
+            <div class="relative aspect-video bg-black cursor-pointer" onclick="greeting.playWithSound()">
+                <video id="greeting-video" class="w-full h-full object-cover" loop playsinline>
+                    <source src="assets/saludo_general.mp4" type="video/mp4">
+                    <!-- Backup source for demo if local not found -->
+                    <source src="https://assets.mixkit.co/videos/preview/mixkit-subway-train-moving-in-the-tunnel-4171-large.mp4" type="video/mp4">
+                    Tu navegador no soporta videos.
+                </video>
+                <div class="absolute inset-0 flex items-center justify-center" id="play-hint">
+                    <div class="w-16 h-16 bg-primary/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-xl animate-pulse">
+                        <span class="material-symbols-outlined text-white text-4xl">play_arrow</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 sm:p-8 space-y-6">
+                <!-- Títulos fuera del vídeo -->
+                <div class="space-y-1">
+                    <h2 id="greeting-title" class="text-zinc-900 dark:text-white font-headline font-black text-2xl sm:text-3xl tracking-tight leading-tight">¡Bienvenido a Subte Nachi!</h2>
+                    <p id="greeting-subtitle" class="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Explora la red de subtes como nunca antes.</p>
+                </div>
+
+                <!-- Controles en una sola línea -->
+                <div class="flex items-center justify-between gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-4 rounded-2xl">
+                    <label class="relative flex items-center gap-2 cursor-pointer group flex-1">
+                        <input type="checkbox" id="dont-show-checkbox" class="peer sr-only" />
+                        <div
+                            class="w-5 h-5 shrink-0 border-2 border-zinc-300 rounded-lg group-hover:border-primary peer-checked:bg-primary peer-checked:border-primary transition-all flex items-center justify-center">
+                            <span
+                                class="material-symbols-outlined text-white text-[14px] scale-0 peer-checked:scale-100 transition-transform">check</span>
+                        </div>
+                        <span class="text-[11px] sm:text-xs font-black uppercase tracking-tight text-zinc-500">No mostrar más</span>
+                    </label>
+
+                    <div class="w-px h-4 bg-zinc-200 dark:bg-zinc-700"></div>
+
+                    <label class="relative flex items-center gap-2 cursor-pointer group flex-1 justify-end">
+                        <input type="checkbox" id="sound-checkbox" class="peer sr-only" checked onchange="greeting.toggleSound(this.checked)" />
+                        <span class="text-[11px] sm:text-xs font-black uppercase tracking-tight text-zinc-500">Sonido</span>
+                        <div
+                            class="w-5 h-5 shrink-0 border-2 border-zinc-300 rounded-lg group-hover:border-primary peer-checked:bg-primary peer-checked:border-primary transition-all flex items-center justify-center">
+                            <span
+                                class="material-symbols-outlined text-white text-[14px] scale-0 peer-checked:scale-100 transition-transform">volume_up</span>
+                        </div>
+                    </label>
+                </div>
+
+                <button onclick="greeting.close()"
+                    class="w-full bg-primary hover:bg-primary/90 text-white font-headline font-black py-4 rounded-2xl transition-all active:scale-[0.98] shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
+                    ¡COMENZAR A PASEAR!
+                    <span class="material-symbols-outlined">east</span>
+                </button>
+            </div>
+
+
+        </div>
+    </div>
+
 
     <!-- Bottom Navigation Bar -->
     <nav class="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-xl border-t border-zinc-100 pb-8 pt-3 z-50">
         <div class="flex justify-around items-center max-w-2xl mx-auto px-4">
-            <button onclick="router.navigate('map')" class="nav-item flex flex-col items-center gap-1 px-5 py-3 text-zinc-400 hover:text-primary hover:bg-primary/5 rounded-2xl transition-all active:scale-95 ease-out" data-view="map">
+            <button onclick="router.navigate('map')"
+                class="nav-item flex flex-col items-center gap-1 px-5 py-3 text-zinc-400 hover:text-primary hover:bg-primary/5 rounded-2xl transition-all active:scale-95 ease-out"
+                data-view="map">
                 <span class="material-symbols-outlined text-2xl">map</span>
                 <span class="text-[10px] font-black uppercase tracking-widest">Mapa</span>
             </button>
-            <button onclick="router.navigate('lines')" class="nav-item flex flex-col items-center gap-1 px-5 py-3 text-zinc-400 hover:text-primary hover:bg-primary/5 rounded-2xl transition-all active:scale-95 ease-out" data-view="lines">
+            <button onclick="router.navigate('lines')"
+                class="nav-item flex flex-col items-center gap-1 px-5 py-3 text-zinc-400 hover:text-primary hover:bg-primary/5 rounded-2xl transition-all active:scale-95 ease-out"
+                data-view="lines">
                 <span class="material-symbols-outlined text-2xl">subway</span>
                 <span class="text-[10px] font-black uppercase tracking-widest">Líneas</span>
             </button>
-            <button onclick="router.navigate('trains')" class="nav-item flex flex-col items-center gap-1 px-5 py-3 text-zinc-400 hover:text-primary hover:bg-primary/5 rounded-2xl transition-all active:scale-95 ease-out" data-view="trains">
+            <button onclick="router.navigate('trains')"
+                class="nav-item flex flex-col items-center gap-1 px-5 py-3 text-zinc-400 hover:text-primary hover:bg-primary/5 rounded-2xl transition-all active:scale-95 ease-out"
+                data-view="trains">
                 <span class="material-symbols-outlined text-2xl">train</span>
                 <span class="text-[10px] font-black uppercase tracking-widest">Trenes</span>
             </button>
-            <button onclick="router.navigate('nachi')" class="nav-item flex flex-col items-center gap-1 px-5 py-3 text-zinc-400 hover:text-primary hover:bg-primary/5 rounded-2xl transition-all active:scale-95 ease-out" data-view="nachi">
+            <button onclick="router.navigate('nachi')"
+                class="nav-item flex flex-col items-center gap-1 px-5 py-3 text-zinc-400 hover:text-primary hover:bg-primary/5 rounded-2xl transition-all active:scale-95 ease-out"
+                data-view="nachi">
                 <span class="material-symbols-outlined text-2xl filled">emoji_emotions</span>
                 <span class="text-[10px] font-black uppercase tracking-widest italic">Nachi</span>
             </button>
@@ -104,8 +184,13 @@
     <!-- Scripts -->
     <script src="js/database.js?v=2"></script>
     <script src="js/views.js?v=2"></script>
+    <script src="js/greeting.js?v=2"></script>
     <script src="js/app.js?v=2"></script>
     <script>
+        window.addEventListener('load', () => {
+            greeting.init();
+        });
+
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').then((reg) => {
@@ -117,4 +202,5 @@
         }
     </script>
 </body>
+
 </html>
