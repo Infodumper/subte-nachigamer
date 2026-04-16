@@ -1,5 +1,192 @@
+// ─── Estado global de vistas (persiste entre navigate si el usuario vuelve) ───
+const viewState = {
+    lines: {
+        reversed: {},   // { lineId: bool }
+        expanded: null  // lineId | null
+    },
+    trains: {
+        expanded: null  // trainId | null
+    }
+};
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function buildStationsList(stations, line, isExpanded) {
+    return stations.map((s) => `
+        <div class="flex flex-col py-1 ${s.closed ? 'opacity-40' : ''}">
+            <div class="flex items-center gap-3">
+                <div class="w-2.5 h-2.5 shrink-0 rounded-full ${s.closed ? 'bg-zinc-400' : line.colorClass} shadow-sm border border-white"></div>
+                <span class="text-sm ${s.closed ? 'line-through text-zinc-400' : 'font-bold text-zinc-700'}">${s.name}</span>
+                ${s.combinations ? s.combinations.map(c => `<span class="text-[8px] bg-zinc-200 text-zinc-600 px-1.5 py-0.5 rounded font-black shrink-0">${c}</span>`).join('') : ''}
+            </div>
+            ${isExpanded && s.info ? `
+                <div class="ml-6 mt-1.5 text-xs text-zinc-600 font-medium italic border-l-2 border-primary/20 pl-3 py-1 bg-white rounded-r-lg shadow-sm">
+                    ${s.info}
+                </div>
+            ` : ''}
+        </div>
+    `).join('');
+}
+
+// ─── Acciones de Líneas (operan sobre el DOM existente, sin re-render total) ──
+
+window.reverseLine = function(lineId) {
+    viewState.lines.reversed[lineId] = !viewState.lines.reversed[lineId];
+
+    const card = document.querySelector(`[data-line-id="${lineId}"]`);
+    if (!card) return;
+
+    const isRev = viewState.lines.reversed[lineId];
+    const line = subteData.lines.find(l => l.id === lineId);
+    const stationsRaw = subteData.stations[lineId];
+    const stations = isRev ? [...stationsRaw].reverse() : stationsRaw;
+    const isExpanded = viewState.lines.expanded === lineId;
+
+    // Actualizar texto de cabecera (from/to)
+    const fromEl = card.querySelector('[data-endpoint="from"]');
+    const toEl = card.querySelector('[data-endpoint="to"]');
+    if (fromEl) fromEl.textContent = isRev ? line.to : line.from;
+    if (toEl) toEl.textContent = isRev ? line.from : line.to;
+
+    // Actualizar lista de estaciones
+    const listEl = card.querySelector('[data-stations-list]');
+    if (listEl) listEl.innerHTML = buildStationsList(stations, line, isExpanded);
+};
+
+window.toggleLineExpand = function(lineId) {
+    const wasExpanded = viewState.lines.expanded === lineId;
+    const previousId = viewState.lines.expanded;
+    viewState.lines.expanded = wasExpanded ? null : lineId;
+
+    // Colapsar la card anterior
+    if (previousId && previousId !== lineId) {
+        _applyLineCardState(previousId, false);
+    }
+    // Toggle la card actual
+    _applyLineCardState(lineId, !wasExpanded);
+
+    // Saludo especial Línea E
+    if (!wasExpanded && lineId === 'E' && typeof greeting !== 'undefined') {
+        setTimeout(() => greeting.show('lineE'), 100);
+    }
+};
+
+function _applyLineCardState(lineId, isExpanded) {
+    const card = document.querySelector(`[data-line-id="${lineId}"]`);
+    if (!card) return;
+
+    const line = subteData.lines.find(l => l.id === lineId);
+    const stationsRaw = subteData.stations[lineId];
+    const isRev = viewState.lines.reversed[lineId];
+    const stations = isRev ? [...stationsRaw].reverse() : stationsRaw;
+
+    // Toggle clases de la card
+    card.classList.toggle('shadow-xl', isExpanded);
+    card.classList.toggle('ring-4', isExpanded);
+    card.classList.toggle('ring-primary/10', isExpanded);
+
+    // Altura de la lista scrollable
+    const listContainer = card.querySelector('[data-stations-container]');
+    if (listContainer) {
+        listContainer.classList.toggle('max-h-48', !isExpanded);
+        listContainer.classList.toggle('max-h-[32rem]', isExpanded);
+    }
+
+    // Texto del contador
+    const counterEl = card.querySelector('[data-station-count]');
+    if (counterEl) {
+        counterEl.textContent = `${stations.length} Estaciones${isExpanded ? ' — Modo Detallado' : ''}`;
+    }
+
+    // Re-render de estaciones (solo para mostrar/ocultar .info)
+    const listEl = card.querySelector('[data-stations-list]');
+    if (listEl) listEl.innerHTML = buildStationsList(stations, line, isExpanded);
+}
+
+// ─── Acciones de Trenes (operan sobre DOM existente) ─────────────────────────
+
+window.toggleTrainExpand = function(trainId) {
+    const wasExpanded = viewState.trains.expanded === trainId;
+    const previousId = viewState.trains.expanded;
+    viewState.trains.expanded = wasExpanded ? null : trainId;
+
+    if (previousId && previousId !== trainId) {
+        _applyTrainCardState(previousId, false);
+    }
+    _applyTrainCardState(trainId, !wasExpanded);
+};
+
+function _applyTrainCardState(trainId, isExpanded) {
+    const card = document.querySelector(`[data-train-id="${trainId}"]`);
+    if (!card) return;
+
+    const train = subteData.trainModels.find(t => t.id === trainId);
+
+    // Ring visual
+    card.classList.toggle('ring-4', isExpanded);
+    card.classList.toggle('ring-primary/20', isExpanded);
+
+    // Imagen — altura
+    const imgWrapper = card.querySelector('[data-train-img-wrapper]');
+    if (imgWrapper) {
+        imgWrapper.classList.toggle('h-56', !isExpanded);
+        imgWrapper.classList.toggle('h-64', isExpanded);
+    }
+    const img = imgWrapper?.querySelector('img');
+    if (img) {
+        img.classList.toggle('group-hover:scale-105', !isExpanded);
+        img.classList.toggle('scale-110', isExpanded);
+    }
+
+    // Panel de detalles extra
+    const extraPanel = card.querySelector('[data-train-extra]');
+    if (extraPanel) {
+        extraPanel.innerHTML = isExpanded ? _buildTrainExtraHTML(train) : _buildTrainCollapseHint();
+    }
+}
+
+function _buildTrainExtraHTML(train) {
+    return `
+        <div class="mt-4 grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div class="bg-primary/5 p-4 rounded-2xl border border-primary/10">
+                <span class="text-[9px] font-black uppercase text-primary/60 block mb-1">Velocidad Máxima</span>
+                <span class="text-sm font-black text-primary">${train.speed || '-'}</span>
+            </div>
+            <div class="bg-primary/5 p-4 rounded-2xl border border-primary/10">
+                <span class="text-[9px] font-black uppercase text-primary/60 block mb-1">Capacidad Total</span>
+                <span class="text-sm font-black text-primary">${train.capacity || '-'}</span>
+            </div>
+        </div>
+        ${train.blueprint ? `
+        <div class="mt-4 w-full h-48 bg-blue-900 rounded-2xl overflow-hidden border-4 border-white shadow-md animate-in fade-in zoom-in duration-700 relative group/bp cursor-zoom-in" onclick="event.stopPropagation(); router.openModal('${train.blueprint}')">
+            <span class="absolute top-2 left-3 text-[9px] text-white/50 uppercase tracking-widest font-black z-10">PLANO TÉCNICO</span>
+            <img src="${train.blueprint}" class="w-full h-full object-cover mix-blend-screen opacity-90 group-hover/bp:scale-110 transition-transform duration-700" alt="Plano de ${train.name}">
+            <div class="absolute inset-0 bg-blue-900/20 group-hover/bp:bg-transparent transition-colors"></div>
+        </div>
+        ` : ''}
+        ${train.funFact ? `
+        <div class="mt-4 bg-yellow-50 p-6 rounded-2xl border border-yellow-200 shadow-sm animate-in fade-in slide-in-from-top-4 duration-1000">
+            <span class="text-xs font-black uppercase text-yellow-600 tracking-widest flex items-center gap-2 mb-2"><span class="text-lg">💡</span> DATO CURIOSO</span>
+            <p class="text-sm font-bold text-yellow-900 leading-relaxed italic">"${train.funFact}"</p>
+        </div>
+        ` : ''}
+        <div class="mt-6 flex justify-center border-t border-zinc-100 pt-4">
+            <span class="material-symbols-outlined text-zinc-300">expand_less</span>
+        </div>`;
+}
+
+function _buildTrainCollapseHint() {
+    return `
+        <div class="mt-4 flex justify-center">
+            <span class="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-1 group-hover:text-primary transition-colors bg-white px-4 py-2 rounded-full border border-zinc-100 shadow-sm">
+                TOCÁ PARA SABER MÁS <span class="material-symbols-outlined text-sm">expand_more</span>
+            </span>
+        </div>`;
+}
+
+// ─── Registro de Vistas ───────────────────────────────────────────────────────
+
 const viewRegistry = {
-    // Estas funciones serán llamadas por app.js para obtener el HTML final
     map: () => {
         let statusHtml = '';
         subteData.lines.forEach(line => {
@@ -31,13 +218,13 @@ const viewRegistry = {
             </div>
 
             <div class="relative overflow-hidden rounded-[2.5rem] bg-zinc-200 aspect-video shadow-xl border-4 border-white group cursor-zoom-in" onclick="router.openModal('https://emova.com.ar/wp-content/uploads/2025/06/mapa-esquematico-emova-web-2025.jpg')">
-                <img src="https://emova.com.ar/wp-content/uploads/2025/06/mapa-esquematico-emova-web-2025.jpg" class="w-full h-full object-contain bg-white group-hover:scale-105 transition-transform duration-[2s]" alt="Mapa Oficial Subte">
+                <img loading="lazy" src="https://emova.com.ar/wp-content/uploads/2025/06/mapa-esquematico-emova-web-2025.jpg" class="w-full h-full object-contain bg-white group-hover:scale-105 transition-transform duration-[2s]" alt="Mapa Oficial Subte GCBA">
                 <div class="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors"></div>
             </div>
 
             <div class="flex flex-col gap-4">
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-zinc-100 italic text-zinc-500 text-sm font-medium">
-                     <p>Nachi, acordate que el <b>Subte</b> es el transporte más rápido debajo de la ciudad. 🚇✨</p>
+                    <p>Nachi, acordate que el <b>Subte</b> es el transporte más rápido debajo de la ciudad. 🚇✨</p>
                 </div>
                 <button onclick="router.navigate('lines')" class="w-full py-5 bg-primary text-white font-headline font-black rounded-3xl shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3">
                     <span class="material-symbols-outlined">subway</span>
@@ -48,50 +235,28 @@ const viewRegistry = {
     },
 
     lines: () => {
-        if (!window.reverseLine) {
-            window.reversedLinesState = {};
-            window.expandedLinesState = {};
-            
-            window.reverseLine = function(lineId) {
-                window.reversedLinesState[lineId] = !window.reversedLinesState[lineId];
-                document.getElementById('app-content').innerHTML = viewRegistry.lines();
-            };
-            
-            window.toggleLineExpand = function(lineId) {
-                const wasExpanded = window.expandedLinesState[lineId];
-                window.expandedLinesState = {}; // Achicar todas
-                if (!wasExpanded) {
-                    window.expandedLinesState[lineId] = true; // Agrandar solo la solicitada
-                    
-                    // Si es la Línea E, mostrar el saludo especial
-                    if (lineId === 'E') {
-                        if (typeof greeting !== 'undefined') {
-                            setTimeout(() => greeting.show('lineE'), 100);
-                        }
-                    }
-                }
-                document.getElementById('app-content').innerHTML = viewRegistry.lines();
-            };
-        }
         let linesHtml = '';
         subteData.lines.forEach(line => {
             const stationsRaw = subteData.stations[line.id];
             const closedTotal = stationsRaw.filter(s => s.closed).length;
-            
-            const isRev = window.reversedLinesState[line.id];
-            const isExpanded = window.expandedLinesState[line.id];
-            
+            const isRev = viewState.lines.reversed[line.id];
+            const isExpanded = viewState.lines.expanded === line.id;
             const displayFrom = isRev ? line.to : line.from;
             const displayTo = isRev ? line.from : line.to;
             const stations = isRev ? [...stationsRaw].reverse() : stationsRaw;
-            
+
             linesHtml += `
-            <div class="bg-white rounded-[2rem] shadow-sm border border-zinc-100 overflow-hidden mb-6 group transition-all duration-300 hover:shadow-md ${isExpanded ? 'md:col-span-2 shadow-xl ring-4 ring-primary/10' : ''}">
+            <div data-line-id="${line.id}" class="bg-white rounded-[2rem] shadow-sm border border-zinc-100 overflow-hidden mb-6 group transition-all duration-300 hover:shadow-md ${isExpanded ? 'shadow-xl ring-4 ring-primary/10' : ''}">
                 <div class="${line.colorClass} p-6 text-white relative pr-24 cursor-pointer hover:brightness-110 transition-all select-none" onclick="window.toggleLineExpand('${line.id}')">
                     <h3 class="font-headline font-black text-3xl mb-2">${line.name}</h3>
-                    <p class="text-white/90 font-bold text-xs uppercase tracking-widest flex items-center gap-2 mb-1"><span class="w-1.5 h-1.5 rounded-full bg-white/60"></span> ${displayFrom}</p>
-                    <p class="text-white/90 font-bold text-xs uppercase tracking-widest flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-white/60"></span> ${displayTo}</p>
-                    
+                    <p class="text-white/90 font-bold text-xs uppercase tracking-widest flex items-center gap-2 mb-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-white/60"></span>
+                        <span data-endpoint="from">${displayFrom}</span>
+                    </p>
+                    <p class="text-white/90 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-white/60"></span>
+                        <span data-endpoint="to">${displayTo}</span>
+                    </p>
                     <div class="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-2">
                         <div class="text-6xl opacity-20 font-black">${line.id}</div>
                         <button onclick="event.stopPropagation(); window.reverseLine('${line.id}')" class="w-10 h-10 bg-black/10 hover:bg-black/20 text-white rounded-xl flex items-center justify-center transition-all active:scale-90" title="Cambiar sentido">
@@ -101,24 +266,13 @@ const viewRegistry = {
                 </div>
                 <div class="p-6 bg-zinc-50/50">
                     <div class="flex items-center justify-between mb-4">
-                        <span class="text-[10px] font-black text-zinc-400 uppercase tracking-widest">${stations.length} Estaciones${isExpanded ? ' — Modo Detallado' : ''}</span>
+                        <span data-station-count class="text-[10px] font-black text-zinc-400 uppercase tracking-widest">${stations.length} Estaciones${isExpanded ? ' — Modo Detallado' : ''}</span>
                         ${closedTotal > 0 ? `<span class="text-[9px] font-black text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-100">${closedTotal} Cerradas</span>` : ''}
                     </div>
-                    <div class="space-y-3 ${isExpanded ? 'max-h-[32rem]' : 'max-h-48'} transition-all duration-500 overflow-y-auto pr-3 custom-scrollbar">
-                        ${stations.map((s, i) => `
-                            <div class="flex flex-col py-1 ${s.closed ? 'opacity-40' : ''}">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-2.5 h-2.5 shrink-0 rounded-full ${s.closed ? 'bg-zinc-400' : line.colorClass} shadow-sm border border-white"></div>
-                                    <span class="text-sm ${s.closed ? 'line-through text-zinc-400' : 'font-bold text-zinc-700'}">${s.name}</span>
-                                    ${s.combinations ? s.combinations.map(c => `<span class="text-[8px] bg-zinc-200 text-zinc-600 px-1.5 py-0.5 rounded font-black shrink-0">${c}</span>`).join('') : ''}
-                                </div>
-                                ${isExpanded && s.info ? `
-                                    <div class="ml-6 mt-1.5 text-xs text-zinc-600 font-medium italic border-l-2 border-primary/20 pl-3 py-1 bg-white rounded-r-lg shadow-sm">
-                                        ${s.info}
-                                    </div>
-                                ` : ''}
-                            </div>
-                        `).join('')}
+                    <div data-stations-container class="transition-all duration-500 overflow-y-auto pr-3 custom-scrollbar ${isExpanded ? 'max-h-[32rem]' : 'max-h-48'}">
+                        <div data-stations-list>
+                            ${buildStationsList(stations, line, isExpanded)}
+                        </div>
                     </div>
                 </div>
             </div>`;
@@ -137,25 +291,14 @@ const viewRegistry = {
     },
 
     trains: () => {
-        if (!window.toggleTrainExpand) {
-            window.expandedTrainsState = {};
-            window.toggleTrainExpand = function(trainId) {
-                const wasExpanded = window.expandedTrainsState[trainId];
-                window.expandedTrainsState = {}; // Cerrar todos
-                if (!wasExpanded) {
-                    window.expandedTrainsState[trainId] = true;
-                }
-                document.getElementById('app-content').innerHTML = viewRegistry.trains();
-            };
-        }
         let trainsHtml = '';
         subteData.trainModels.forEach(train => {
-            const isExpanded = window.expandedTrainsState[train.id];
-            
+            const isExpanded = viewState.trains.expanded === train.id;
+
             trainsHtml += `
-            <article class="bg-white rounded-[2.5rem] overflow-hidden shadow-lg border border-zinc-100 mb-8 group cursor-pointer transition-all duration-300 hover:shadow-xl ${isExpanded ? 'ring-4 ring-primary/20' : ''}" onclick="window.toggleTrainExpand('${train.id}')">
-                <div class="${isExpanded ? 'h-64' : 'h-56'} overflow-hidden relative transition-all duration-500">
-                    <img src="${train.image}" alt="${train.name}" class="w-full h-full object-cover transition-transform duration-[5s] ${isExpanded ? 'scale-110' : 'group-hover:scale-105'}">
+            <article data-train-id="${train.id}" class="bg-white rounded-[2.5rem] overflow-hidden shadow-lg border border-zinc-100 mb-8 group cursor-pointer transition-all duration-300 hover:shadow-xl ${isExpanded ? 'ring-4 ring-primary/20' : ''}" onclick="window.toggleTrainExpand('${train.id}')">
+                <div data-train-img-wrapper class="${isExpanded ? 'h-64' : 'h-56'} overflow-hidden relative transition-all duration-500">
+                    <img loading="lazy" src="${train.image}" alt="${train.name}" class="w-full h-full object-cover transition-transform duration-[5s] ${isExpanded ? 'scale-110' : 'group-hover:scale-105'}">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
                     <div class="absolute bottom-5 left-6 flex gap-2">
                         ${train.lines.map(l => `<div class="w-8 h-8 rounded-xl bg-white/20 text-white flex items-center justify-center font-black text-xs shadow-lg backdrop-blur-md border border-white/30">${l}</div>`).join('')}
@@ -177,44 +320,9 @@ const viewRegistry = {
                             <span class="text-sm font-black text-zinc-700">${train.year}</span>
                         </div>
                     </div>
-                    
-                    ${isExpanded ? `
-                        <div class="mt-4 grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                            <div class="bg-primary/5 p-4 rounded-2xl border border-primary/10">
-                                <span class="text-[9px] font-black uppercase text-primary/60 block mb-1">Velocidad Máxima</span>
-                                <span class="text-sm font-black text-primary">${train.speed || '-'}</span>
-                            </div>
-                            <div class="bg-primary/5 p-4 rounded-2xl border border-primary/10">
-                                <span class="text-[9px] font-black uppercase text-primary/60 block mb-1">Capacidad Total</span>
-                                <span class="text-sm font-black text-primary">${train.capacity || '-'}</span>
-                            </div>
-                        </div>
-                        
-                        ${train.blueprint ? `
-                        <div class="mt-4 w-full h-48 bg-blue-900 rounded-2xl overflow-hidden border-4 border-white shadow-md animate-in fade-in zoom-in duration-700 relative group/bp cursor-zoom-in" onclick="event.stopPropagation(); router.openModal('${train.blueprint}')">
-                            <span class="absolute top-2 left-3 text-[9px] text-white/50 uppercase tracking-widest font-black z-10">PLANO TÉCNICO</span>
-                            <img src="${train.blueprint}" class="w-full h-full object-cover mix-blend-screen opacity-90 group-hover/bp:scale-110 transition-transform duration-700" alt="Plano de ${train.name}">
-                            <div class="absolute inset-0 bg-blue-900/20 group-hover/bp:bg-transparent transition-colors"></div>
-                        </div>
-                        ` : ''}
-
-                        ${train.funFact ? `
-                        <div class="mt-4 bg-yellow-50 p-6 rounded-2xl border border-yellow-200 shadow-sm animate-in fade-in slide-in-from-top-4 duration-1000">
-                            <span class="text-xs font-black uppercase text-yellow-600 tracking-widest flex items-center gap-2 mb-2"><span class="text-lg">💡</span> DATO CURIOSO</span>
-                            <p class="text-sm font-bold text-yellow-900 leading-relaxed italic">"${train.funFact}"</p>
-                        </div>
-                        ` : ''}
-                        
-                        <div class="mt-6 flex justify-center border-t border-zinc-100 pt-4">
-                            <span class="material-symbols-outlined text-zinc-300">expand_less</span>
-                        </div>
-                    ` : `
-                        <div class="mt-4 flex justify-center">
-                            <span class="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-1 group-hover:text-primary transition-colors bg-white px-4 py-2 rounded-full border border-zinc-100 shadow-sm">
-                                TOCÁ PARA SABER MÁS <span class="material-symbols-outlined text-sm">expand_more</span>
-                            </span>
-                        </div>
-                    `}
+                    <div data-train-extra>
+                        ${isExpanded ? _buildTrainExtraHTML(train) : _buildTrainCollapseHint()}
+                    </div>
                 </div>
             </article>`;
         });
@@ -230,14 +338,12 @@ const viewRegistry = {
     },
 
     nachi: () => {
-        // Obtenemos la línea D específicamente para Nachi
         const lineD = subteData.lines.find(l => l.id === 'D');
-        const stations = subteData.stations['D'];
-        
+
         return `
         <section class="space-y-8 pb-12">
             <div class="bg-primary p-10 rounded-[3.5rem] shadow-2xl text-white relative overflow-hidden">
-                <div class="absolute -right-6 -top-6 text-[10rem] opacity-10 transform rotate-12 transition-transform">🚆</div>
+                <div class="absolute -right-6 -top-6 text-[10rem] opacity-10 transform rotate-12">🚆</div>
                 <div class="relative z-10">
                     <h2 class="text-6xl font-black font-headline tracking-tighter mb-4 italic leading-none">¡Hola Nachi!</h2>
                     <p class="text-white/80 font-bold text-2xl leading-snug max-w-xs">Hoy vamos a pasear por la ciudad.</p>
@@ -262,11 +368,15 @@ const viewRegistry = {
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="p-8 bg-[#f0f9ff] rounded-[2.5rem] border border-blue-100 text-center flex flex-col items-center gap-4">
                         <div class="w-16 h-16 bg-white rounded-2xl shadow-md flex items-center justify-center border border-blue-50">
-                             <span class="material-symbols-outlined text-primary text-4xl filled">train</span>
+                            <span class="material-symbols-outlined text-primary text-4xl filled">train</span>
                         </div>
                         <span class="font-black text-primary text-2xl tracking-tighter">Trenes<br>Modernos</span>
                     </div>
-                        <span class="font-black text-primary text-2xl tracking-tighter">Accesos<br>Fáciles</span>
+                    <div class="p-8 bg-[#f0fff4] rounded-[2.5rem] border border-emerald-100 text-center flex flex-col items-center gap-4">
+                        <div class="w-16 h-16 bg-white rounded-2xl shadow-md flex items-center justify-center border border-emerald-50">
+                            <span class="material-symbols-outlined text-emerald-500 text-4xl filled">accessible</span>
+                        </div>
+                        <span class="font-black text-emerald-600 text-2xl tracking-tighter">Accesos<br>Fáciles</span>
                     </div>
                 </div>
 
@@ -280,9 +390,9 @@ const viewRegistry = {
                     </button>
                 </div>
             </div>
-            
+
             <div class="text-center opacity-20 py-12">
-                 <p class="font-black text-primary text-xs tracking-[0.5em] uppercase">Hecho con amor para Nachi v1.5</p>
+                <p class="font-black text-primary text-xs tracking-[0.5em] uppercase">Hecho con amor para Nachi v1.5</p>
             </div>
         </section>`;
     }

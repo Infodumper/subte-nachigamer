@@ -1,46 +1,37 @@
 window.router = {
-    current: 'map',
+    current: null,
 
     async init() {
-        // Cargar la vista inicial
         await this.navigate('map');
     },
 
     async navigate(viewId) {
-        const contentArea = document.getElementById('app-content');
+        // Evitar re-navegar a la misma vista (salvo que se fuerce)
+        if (this.current === viewId) return;
         this.current = viewId;
 
-        // Mostrar cargando
-        contentArea.innerHTML = `
-            <div class="flex items-center justify-center h-64 animate-pulse">
-                <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-            </div>`;
+        const contentArea = document.getElementById('app-content');
+
+        // Fade out rápido antes de cambiar contenido
+        contentArea.style.transition = 'opacity 0.15s ease-out';
+        contentArea.style.opacity = '0';
 
         try {
-            // Obtener el contenido del registro. Si es función, ejecutarla.
-            let content = '';
             const viewData = viewRegistry[viewId];
-            
-            if (typeof viewData === 'function') {
-                content = viewData();
-            } else {
-                content = viewData || `<h2>Oops! Vista no encontrada</h2>`;
-            }
-            
-            // Inyectar el contenido con una pequeña transición
-            contentArea.style.opacity = '0';
-            contentArea.innerHTML = content;
-            this.updateNavUI();
-            
-            // Animación de entrada
+            const content = typeof viewData === 'function'
+                ? viewData()
+                : viewData ?? `<h2>Oops! Vista no encontrada</h2>`;
+
+            // Esperamos el fade-out, luego inyectamos y hacemos fade-in
             setTimeout(() => {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                contentArea.style.transition = 'opacity 0.3s ease-in-out';
-                contentArea.style.opacity = '1';
-                
-                // Ejecutar scripts específicos de la vista si los hay
+                contentArea.innerHTML = content;
+                window.scrollTo({ top: 0, behavior: 'instant' });
+                this.updateNavUI();
                 this.initViewScripts(viewId);
-            }, 50);
+
+                contentArea.style.transition = 'opacity 0.25s ease-in';
+                contentArea.style.opacity = '1';
+            }, 150);
 
         } catch (error) {
             console.error('Error al navegar:', error);
@@ -50,69 +41,53 @@ window.router = {
                     <h3 class="font-headline font-bold text-red-900 mb-2">¡Ups! Hubo un problema</h3>
                     <p class="text-red-700 text-sm">No pudimos cargar esta sección. Por favor, intenta de nuevo.</p>
                 </div>`;
+            contentArea.style.opacity = '1';
         }
-    },
-
-    async loadView(viewId) {
-        // Por ahora, usamos el registro global de views.js para evitar problemas de CORS localmente.
-        return typeof viewRegistry !== 'undefined' ? viewRegistry[viewId] : `<h2>Error: Registro de vistas no cargado</h2>`;
     },
 
     updateNavUI() {
         document.querySelectorAll('.nav-item').forEach(item => {
             const isActive = item.getAttribute('data-view') === this.current;
             const icon = item.querySelector('.material-symbols-outlined');
-            
+
             if (isActive) {
-                item.classList.remove('text-zinc-400');
-                item.classList.add('text-primary');
-                // Quitar fondo a todos y poner al activo
-                document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('bg-primary/5', 'rounded-xl'));
+                item.classList.replace('text-zinc-400', 'text-primary');
                 item.classList.add('bg-primary/5', 'rounded-xl');
                 if (icon) icon.classList.add('filled');
             } else {
-                item.classList.remove('text-primary', 'bg-primary/5', 'rounded-xl');
-                item.classList.add('text-zinc-400');
+                item.classList.replace('text-primary', 'text-zinc-400');
+                item.classList.remove('bg-primary/5', 'rounded-xl');
                 if (icon) icon.classList.remove('filled');
             }
         });
     },
 
     initViewScripts(viewId) {
-        // Lógica específica para cada vista (ej: mapas, sliders, etc.)
         this.enableDragToScroll();
-        if (viewId === 'map') {
-            console.log('Mapa iniciado');
-        }
     },
 
     enableDragToScroll() {
-        const sliders = document.querySelectorAll('.overflow-x-auto');
-        let isDown = false;
-        let startX;
-        let scrollLeft;
+        document.querySelectorAll('.overflow-x-auto').forEach(slider => {
+            // Evitar registrar listeners duplicados si ya tiene el atributo
+            if (slider.dataset.dragEnabled) return;
+            slider.dataset.dragEnabled = '1';
 
-        sliders.forEach(slider => {
+            let isDown = false;
+            let startX, scrollLeft;
+
             slider.addEventListener('mousedown', (e) => {
                 isDown = true;
                 slider.style.cursor = 'grabbing';
                 startX = e.pageX - slider.offsetLeft;
                 scrollLeft = slider.scrollLeft;
             });
-            slider.addEventListener('mouseleave', () => {
-                isDown = false;
-                slider.style.cursor = '';
-            });
-            slider.addEventListener('mouseup', () => {
-                isDown = false;
-                slider.style.cursor = '';
-            });
+            slider.addEventListener('mouseleave', () => { isDown = false; slider.style.cursor = ''; });
+            slider.addEventListener('mouseup', () => { isDown = false; slider.style.cursor = ''; });
             slider.addEventListener('mousemove', (e) => {
                 if (!isDown) return;
                 e.preventDefault();
                 const x = e.pageX - slider.offsetLeft;
-                const walk = (x - startX) * 2;
-                slider.scrollLeft = scrollLeft - walk;
+                slider.scrollLeft = scrollLeft - (x - startX) * 2;
             });
         });
     },
@@ -138,5 +113,4 @@ window.router = {
     }
 };
 
-// Iniciar app al cargar
 window.addEventListener('DOMContentLoaded', () => router.init());

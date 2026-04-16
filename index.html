@@ -5,12 +5,22 @@
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Subte Nachi - ¡Vamos a pasear!</title>
+
+    <!-- Preconnect para recursos externos críticos -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://cdn.tailwindcss.com" />
+
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link
         href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700;800;900&family=Inter:wght@400;500;600;700&display=swap"
         rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
+
+    <!-- Estilos propios -->
+    <link rel="stylesheet" href="styles/main.css" />
+
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -44,6 +54,7 @@
             },
         }
     </script>
+
     <!-- PWA & Open Graph -->
     <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#00628a" />
@@ -73,7 +84,7 @@
 
     <!-- Main Content Area -->
     <main id="app-content" class="pt-20 pb-32 px-4 max-w-2xl mx-auto min-h-screen">
-        <!-- Content will be injected here by app.js -->
+        <!-- Spinner inicial — reemplazado por router.init() -->
         <div class="flex items-center justify-center h-64">
             <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
         </div>
@@ -81,7 +92,7 @@
 
     <!-- Modal Overlay (for Map Zoom) -->
     <div id="modal-overlay"
-        class="fixed inset-0 z-[100] bg-black/90 hidden backdrop-blur-sm animate-in fade-in duration-300 items-center justify-center p-4"
+        class="fixed inset-0 z-[100] bg-black/90 hidden backdrop-blur-sm items-center justify-center p-4"
         onclick="router.closeModal()">
         <button class="absolute top-6 right-6 text-white text-4xl p-2">&times;</button>
         <img id="modal-img" src="" class="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl"
@@ -94,9 +105,8 @@
         <div
             class="bg-white dark:bg-zinc-900 rounded-[2.5rem] overflow-hidden shadow-2xl max-w-xl w-full border border-white/20 animate-in zoom-in-95 duration-500">
             <div class="relative aspect-video bg-black cursor-pointer" onclick="greeting.playWithSound()">
-                <video id="greeting-video" class="w-full h-full object-cover" playsinline>
+                <video id="greeting-video" class="w-full h-full object-cover" playsinline preload="none">
                     <source src="assets/saludo_general.mp4" type="video/mp4">
-                    <!-- Backup source for demo if local not found -->
                     <source src="https://assets.mixkit.co/videos/preview/mixkit-subway-train-moving-in-the-tunnel-4171-large.mp4" type="video/mp4">
                     Tu navegador no soporta videos.
                 </video>
@@ -108,13 +118,11 @@
             </div>
 
             <div class="p-6 sm:p-8 space-y-6">
-                <!-- Títulos fuera del vídeo -->
                 <div class="space-y-1">
                     <h2 id="greeting-title" class="text-zinc-900 dark:text-white font-headline font-black text-2xl sm:text-3xl tracking-tight leading-tight">¡Bienvenido a Subte Nachi!</h2>
                     <p id="greeting-subtitle" class="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Explora la red de subtes como nunca antes.</p>
                 </div>
 
-                <!-- Controles en una sola línea -->
                 <div class="flex items-center justify-between gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-4 rounded-2xl">
                     <label class="relative flex items-center gap-2 cursor-pointer group flex-1">
                         <input type="checkbox" id="dont-show-checkbox" class="peer sr-only" />
@@ -140,16 +148,13 @@
                 </div>
 
                 <button id="start-button" onclick="greeting.close()"
-                    class="w-full bg-primary hover:bg-primary/90 text-white font-headline font-black py-5 rounded-2xl transition-all active:scale-[0.98] shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    class="w-full bg-primary hover:bg-primary/90 text-white font-headline font-black py-5 rounded-2xl transition-all active:scale-[0.98] shadow-lg shadow-primary/20 hidden items-center justify-center gap-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     ¡COMENZAR A PASEAR!
                     <span class="material-symbols-outlined">east</span>
                 </button>
             </div>
-
-
         </div>
     </div>
-
 
     <!-- Bottom Navigation Bar -->
     <nav class="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-xl border-t border-zinc-100 pb-8 pt-3 z-50">
@@ -182,24 +187,21 @@
     </nav>
 
     <!-- Scripts -->
-    <script src="js/database.js?v=2"></script>
-    <script src="js/views.js?v=2"></script>
-    <script src="js/greeting.js?v=2"></script>
-    <script src="js/app.js?v=2"></script>
+    <script src="js/database.js?v=3"></script>
+    <script src="js/views.js?v=3"></script>
+    <script src="js/greeting.js?v=3"></script>
+    <script src="js/app.js?v=3"></script>
     <script>
+        // Un único listener "load" para iniciar todo
         window.addEventListener('load', () => {
             greeting.init();
-        });
 
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').then((reg) => {
-                    console.log('ServiceWorker registrado correctamente.');
-                }).catch((err) => {
-                    console.log('Error al registrar ServiceWorker:', err);
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').catch((err) => {
+                    console.warn('Error al registrar ServiceWorker:', err);
                 });
-            });
-        }
+            }
+        });
     </script>
 </body>
 
